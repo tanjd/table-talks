@@ -1,0 +1,12 @@
+# Table Talks — run on NAS or any host with Docker Compose
+# Copy this file and .env to the NAS.
+# If image is pre-loaded (docker load): docker compose up -d --no-build
+# If building on NAS: docker compose up -d --build
+services:
+  table-talks:
+    image: table-talks:latest
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - "9999:9999"
