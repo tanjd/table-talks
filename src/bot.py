@@ -116,10 +116,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     raw_secret = app.bot_data.get(BOT_SECRET_KEY)
     secret: str | None = raw_secret if isinstance(raw_secret, str) and raw_secret else None
     if secret:
-        payload = ""
-        if update.message.text:
-            parts = update.message.text.split(None, 1)
-            payload = (parts[1] if len(parts) > 1 else "").strip()
+        # Use context.args (parsed /start arguments) so deep links and "/start SECRET" both work
+        payload = (context.args[0] if context.args else "").strip()
         if not payload or not hmac.compare_digest(payload, secret):
             _log(update, "start_unauthorized")
             await update.message.reply_text(UNAUTHORIZED_MESSAGE)

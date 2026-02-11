@@ -42,11 +42,11 @@ def main() -> None:
         raise SystemExit(1)
     secret = _generate_secret()
     logger.info("Bot starting (polling) with generated secret")
+    invite_link = f"https://t.me/{BOT_USERNAME}?start={secret}"
+    logger.info("Invite link: %s", invite_link)
     sys.stdout.flush()
     sys.stderr.flush()
     app = build_application(token, secret=secret)
-    invite_link = f"https://t.me/{BOT_USERNAME}?start={secret}"
-    logger.info("Invite link: %s", invite_link)
     health_port = int(os.environ.get("HEALTH_PORT", DEFAULT_HEALTH_PORT))
     start_health_server(port=health_port)
     try:
