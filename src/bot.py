@@ -4,7 +4,7 @@ import asyncio
 import hmac
 import logging
 import random
-from typing import Any, cast
+from typing import Any, TypedDict
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -16,8 +16,16 @@ from telegram.ext import (
 
 from .data_loader import Theme, get_questions, get_themes
 
+
 # Session state stored in context.chat_data (persisted per chat)
-SessionDict = dict[str, Any]
+class SessionDict(TypedDict, total=False):
+    theme_id: str | None
+    index: int
+    shuffled_questions: list[str]
+    authorized: bool
+
+
+AppType = Application[Any, Any, Any, Any, Any, Any]
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -47,16 +55,14 @@ def _log(update: Update, action: str, **extra: str | int) -> None:
     logger.info(" | ".join(parts))
 
 
-def _track_chat(
-    application: Application[Any, Any, Any, Any, Any, Any],
-    update: Update,
-) -> None:
+def _track_chat(application: AppType, update: Update) -> None:
     if update.effective_chat is None:
         return
     chat_id: int = update.effective_chat.id
     chat_ids: set[int] = application.bot_data.setdefault(CHAT_IDS_KEY, set())
     chat_ids.add(chat_id)
-    application.bot_data["_last_chat_id"] = chat_id  # for error handler context
+    # for error handler context
+    application.bot_data["_last_chat_id"] = chat_id
 
 
 def _theme_keyboard() -> InlineKeyboardMarkup:
@@ -78,23 +84,23 @@ def _next_keyboard() -> InlineKeyboardMarkup:
 
 
 def _get_session(context: ContextTypes.DEFAULT_TYPE) -> SessionDict:
-    chat_data = context.chat_data
-    if chat_data is None:
+    if context.chat_data is None:
         raise RuntimeError("chat_data is required (PTB application default)")
+    chat_data: SessionDict = context.chat_data  # type: ignore[assignment]
     if "theme_id" not in chat_data:
         chat_data["theme_id"] = None
         chat_data["index"] = 0
         chat_data["shuffled_questions"] = []
-    return cast(SessionDict, chat_data)
+    return chat_data
 
 
 def _is_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    app = cast(Application[Any, Any, Any, Any, Any, Any], context.application)
+    app: AppType = context.application  # type: ignore[assignment]
     raw = app.bot_data.get(BOT_SECRET_KEY)
     if not isinstance(raw, str) or not raw:
         return True
     session = _get_session(context)
-    return bool(session.get("authorized"))
+    return session.get("authorized", False)
 
 
 async def _reject_unauthorized_callback(
@@ -110,9 +116,9 @@ async def _reject_unauthorized_callback(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None:
         return
-    _track_chat(cast(Application[Any, Any, Any, Any, Any, Any], context.application), update)
+    app: AppType = context.application  # type: ignore[assignment]
+    _track_chat(app, update)
     session = _get_session(context)
-    app = cast(Application[Any, Any, Any, Any, Any, Any], context.application)
     raw_secret = app.bot_data.get(BOT_SECRET_KEY)
     secret: str | None = raw_secret if isinstance(raw_secret, str) and raw_secret else None
     if secret:
@@ -171,7 +177,8 @@ async def theme_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not _is_authorized(update, context):
         await _reject_unauthorized_callback(update, context)
         return
-    _track_chat(cast(Application[Any, Any, Any, Any, Any, Any], context.application), update)
+    app: AppType = context.application  # type: ignore[assignment]
+    _track_chat(app, update)
     await query.answer()
     if not query.data or not query.data.startswith(CALLBACK_THEME_PREFIX):
         return
@@ -198,10 +205,11 @@ async def next_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not _is_authorized(update, context):
         await _reject_unauthorized_callback(update, context)
         return
-    _track_chat(cast(Application[Any, Any, Any, Any, Any, Any], context.application), update)
+    app: AppType = context.application  # type: ignore[assignment]
+    _track_chat(app, update)
     await query.answer()
     session = _get_session(context)
-    shuffled = session.get("shuffled_questions")
+    shuffled = session.get("shuffled_questions", [])
     if not shuffled:
         _log(update, "next_card_no_theme")
         await query.edit_message_text(
@@ -210,8 +218,7 @@ async def next_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
     _log(update, "next_card", theme_id=str(session.get("theme_id", "")))
-    index = session.get("index", 0)
-    next_index = int(index) if index is not None else 0
+    next_index = session.get("index", 0)
     await send_card(update, context, shuffled, next_index)
 
 
@@ -222,7 +229,8 @@ async def new_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not _is_authorized(update, context):
         await _reject_unauthorized_callback(update, context)
         return
-    _track_chat(cast(Application[Any, Any, Any, Any, Any, Any], context.application), update)
+    app: AppType = context.application  # type: ignore[assignment]
+    _track_chat(app, update)
     _log(update, "new_topic")
     await query.answer()
     session = _get_session(context)
@@ -246,10 +254,10 @@ async def _on_error(
     logger.exception("Handler error | chat_id=%s | error=%s", chat_id, err)
 
 
-async def _notify_going_offline(app: Application[Any, Any, Any, Any, Any, Any]) -> None:
+async def _notify_going_offline(app: AppType) -> None:
     """Send 'going offline' to tracked chats. Runs in post_stop so the bot is still usable."""
     raw = app.bot_data.get(CHAT_IDS_KEY)
-    chat_ids: set[int] = cast(set[int], raw) if isinstance(raw, set) else set()
+    chat_ids: set[int] = raw if isinstance(raw, set) else set()  # type: ignore[assignment]
     if not chat_ids:
         logger.info("Shutdown: no chats to notify")
         return
@@ -269,8 +277,8 @@ async def _notify_going_offline(app: Application[Any, Any, Any, Any, Any, Any]) 
 def build_application(
     token: str,
     secret: str | None = None,
-) -> Application[Any, Any, Any, Any, Any, Any]:
-    app = (
+) -> AppType:
+    app: AppType = (
         Application.builder()
         .token(token)
         .post_stop(_notify_going_offline)  # type: ignore[arg-type]

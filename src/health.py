@@ -12,7 +12,7 @@ DEFAULT_HEALTH_PORT = 9999
 class _HealthHandler(BaseHTTPRequestHandler):
     """Responds 200 OK only to GET /health."""
 
-    def do_GET(self) -> None:
+    def do_GET(self) -> None:  # noqa: N802
         if self.path == "/health" or self.path == "/health/":
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
