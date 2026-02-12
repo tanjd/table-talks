@@ -3,7 +3,6 @@
 ## Planned
 
 - [ ] **Load questions from Google Sheet** — Replace or supplement CSV with a Google Sheet as the source for themes and questions (e.g. one sheet per theme, or a single sheet with theme + question columns). Use Google Sheets API and a service account or OAuth; keep CSV as fallback or for local dev.
-- [ ] **Logging** — Structured or rotating logs; optionally send errors and key events to a log aggregator (e.g. from the NAS) or to a file for debugging.
 
 ## Done
 

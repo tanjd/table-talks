@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 CALLBACK_THEME_PREFIX = "theme:"
 CALLBACK_NEXT = "next"
 CALLBACK_NEW_TOPIC = "new_topic"
+CALLBACK_END_SESSION = "end_session"
 
 CHAT_IDS_KEY = "chat_ids"
 BOT_SECRET_KEY = "bot_secret"
@@ -79,6 +80,7 @@ def _next_keyboard() -> InlineKeyboardMarkup:
         [
             [InlineKeyboardButton("Skip → Next card", callback_data=CALLBACK_NEXT)],
             [InlineKeyboardButton("New topic", callback_data=CALLBACK_NEW_TOPIC)],
+            [InlineKeyboardButton("End session", callback_data=CALLBACK_END_SESSION)],
         ]
     )
 
@@ -243,6 +245,26 @@ async def new_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    if not _is_authorized(update, context):
+        await _reject_unauthorized_callback(update, context)
+        return
+    app: AppType = context.application  # type: ignore[assignment]
+    _track_chat(app, update)
+    _log(update, "end_session")
+    await query.answer()
+    session = _get_session(context)
+    session["theme_id"] = None
+    session["index"] = 0
+    session["shuffled_questions"] = []
+    await query.edit_message_text(
+        "Thanks for playing! Send /start to begin a new session.",
+    )
+
+
 async def _on_error(
     update: object,
     context: ContextTypes.DEFAULT_TYPE,
@@ -290,5 +312,6 @@ def build_application(
     app.add_handler(CallbackQueryHandler(theme_chosen, pattern=f"^{CALLBACK_THEME_PREFIX}"))
     app.add_handler(CallbackQueryHandler(next_card, pattern=f"^{CALLBACK_NEXT}$"))
     app.add_handler(CallbackQueryHandler(new_topic, pattern=f"^{CALLBACK_NEW_TOPIC}$"))
+    app.add_handler(CallbackQueryHandler(end_session, pattern=f"^{CALLBACK_END_SESSION}$"))
     app.add_error_handler(_on_error)
     return app

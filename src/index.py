@@ -35,13 +35,28 @@ def _generate_secret() -> str:
 
 
 def main() -> None:
-    token = os.environ.get("BOT_TOKEN")
+    # Determine environment and select appropriate token
+    env = os.environ.get("ENV", "").lower()
+    token_dev = os.environ.get("BOT_TOKEN_DEV")
+    token_prd = os.environ.get("BOT_TOKEN")
+
+    if env == "dev":
+        token = token_dev
+        env_name = "dev"
+    else:
+        token = token_prd
+        env_name = "prd" if env == "prd" else "prd (default)"
+
     if not token:
-        logger.critical("BOT_TOKEN not set; exiting")
-        print("Error: Set BOT_TOKEN in the environment or .env", file=sys.stderr)
+        logger.critical("Bot token not set for environment '%s'; exiting", env_name)
+        print(
+            "Error: Set BOT_TOKEN (production) or BOT_TOKEN_DEV in the environment or .env",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
+
     secret = _generate_secret()
-    logger.info("Bot starting (polling) with generated secret")
+    logger.info("Bot starting (polling) in %s environment with generated secret", env_name)
     invite_link = f"https://t.me/{BOT_USERNAME}?start={secret}"
     logger.info("Invite link: %s", invite_link)
     sys.stdout.flush()

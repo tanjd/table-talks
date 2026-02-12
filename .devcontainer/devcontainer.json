@@ -1,6 +1,5 @@
 {
   "name": "table-talks-devcontainer",
-  "service": "table-talks-devcontainer",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "containerEnv": {
     "UV_LINK_MODE": "copy"
@@ -59,7 +58,6 @@
         "[toml]": {
           "editor.defaultFormatter": "tamasfe.even-better-toml"
         },
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
         "ruff.fixAll": true
       }
     }
