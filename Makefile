@@ -1,12 +1,13 @@
 DOCKER_IMAGE ?= tanjd/table-talks:latest
 
-.PHONY: help sync run test lint format typecheck check docker-build docker-run docker-push
+.PHONY: help setup sync run test lint format typecheck check docker-build docker-run docker-push
 
 .DEFAULT_GOAL := help
 
 help:
 	@echo "Table Talks — available targets:"
 	@echo ""
+	@echo "  make setup        Install deps and pre-commit hooks (uv sync, pre-commit install)"
 	@echo "  make sync         Install dependencies (uv sync)"
 	@echo "  make run         Run the bot (uv run python -m src.index)"
 	@echo "  make test        Run tests (uv run pytest)"
@@ -17,6 +18,9 @@ help:
 	@echo "  make docker-build  Build the Docker image (tag: table-talks)"
 	@echo "  make docker-run    Run the container (requires .env or pass BOT_TOKEN)"
 	@echo "  make docker-push   Build, tag as $(DOCKER_IMAGE), and push to Docker Hub"
+
+setup: sync
+	uv run pre-commit install
 
 sync:
 	uv sync

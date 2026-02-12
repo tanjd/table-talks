@@ -1,9 +1,11 @@
 {
-  "name": "Table Talks",
+  "name": "table-talks-devcontainer",
+  "service": "table-talks-devcontainer",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "containerEnv": {
     "UV_LINK_MODE": "copy"
   },
+  "postCreateCommand": "make setup",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.13",
