@@ -61,7 +61,7 @@ def main() -> None:
     logger.info("Invite link: %s", invite_link)
     sys.stdout.flush()
     sys.stderr.flush()
-    app = build_application(token, secret=secret)
+    app = build_application(token, secret=secret, env=env_name)
     health_port = int(os.environ.get("HEALTH_PORT", DEFAULT_HEALTH_PORT))
     start_health_server(port=health_port)
     try:

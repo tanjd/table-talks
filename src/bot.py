@@ -1,9 +1,11 @@
 """Table Talks Telegram bot: theme selection and question cards with skip."""
 
 import asyncio
+import functools
 import hmac
 import logging
 import random
+from collections.abc import Callable, Coroutine
 from typing import Any, TypedDict
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -115,6 +117,21 @@ async def _reject_unauthorized_callback(
         await query.edit_message_text(UNAUTHORIZED_MESSAGE)
 
 
+def require_auth(
+    handler: Callable[[Update, ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]],
+) -> Callable[[Update, ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
+    """Decorator to check authorization before handling callback queries."""
+
+    @functools.wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if not _is_authorized(update, context):
+            await _reject_unauthorized_callback(update, context)
+            return
+        await handler(update, context)
+
+    return wrapper
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None:
         return
@@ -172,12 +189,10 @@ async def send_card(
         await update.message.reply_text(text, reply_markup=markup)
 
 
+@require_auth
 async def theme_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if query is None:
-        return
-    if not _is_authorized(update, context):
-        await _reject_unauthorized_callback(update, context)
         return
     app: AppType = context.application  # type: ignore[assignment]
     _track_chat(app, update)
@@ -200,12 +215,10 @@ async def theme_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await send_card(update, context, shuffled, 0)
 
 
+@require_auth
 async def next_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if query is None:
-        return
-    if not _is_authorized(update, context):
-        await _reject_unauthorized_callback(update, context)
         return
     app: AppType = context.application  # type: ignore[assignment]
     _track_chat(app, update)
@@ -224,12 +237,10 @@ async def next_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_card(update, context, shuffled, next_index)
 
 
+@require_auth
 async def new_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if query is None:
-        return
-    if not _is_authorized(update, context):
-        await _reject_unauthorized_callback(update, context)
         return
     app: AppType = context.application  # type: ignore[assignment]
     _track_chat(app, update)
@@ -245,12 +256,10 @@ async def new_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+@require_auth
 async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if query is None:
-        return
-    if not _is_authorized(update, context):
-        await _reject_unauthorized_callback(update, context)
         return
     app: AppType = context.application  # type: ignore[assignment]
     _track_chat(app, update)
@@ -277,14 +286,33 @@ async def _on_error(
 
 
 async def _notify_going_offline(app: AppType) -> None:
-    """Send 'going offline' to tracked chats. Runs in post_stop so the bot is still usable."""
+    """Send 'going offline' to tracked chats with active sessions.
+
+    Runs in post_stop so the bot is still usable.
+    """
     raw = app.bot_data.get(CHAT_IDS_KEY)
     chat_ids: set[int] = raw if isinstance(raw, set) else set()  # type: ignore[assignment]
     if not chat_ids:
         logger.info("Shutdown: no chats to notify")
         return
     notified = 0
+    skipped = 0
     for cid in chat_ids:
+        # Check if chat has an active session
+        chat_data = app.chat_data.get(cid)
+        has_active_session = False
+        if chat_data and isinstance(chat_data, dict):
+            # Session is active if user has selected a theme or has questions loaded
+            session_data: dict[str, object] = chat_data  # type: ignore[assignment]
+            has_active_session = bool(
+                session_data.get("theme_id") or session_data.get("shuffled_questions")
+            )
+
+        if not has_active_session:
+            skipped += 1
+            logger.debug("Shutdown: skipping chat_id=%s (no active session)", cid)
+            continue
+
         try:
             await app.bot.send_message(chat_id=cid, text=OFFLINE_MESSAGE)
             notified += 1
@@ -293,12 +321,18 @@ async def _notify_going_offline(app: AppType) -> None:
     # Let the send requests flush before shutdown tears down the HTTP client
     if notified:
         await asyncio.sleep(1.0)
-    logger.info("Shutdown: notified %d chat(s) that bot is going offline", notified)
+    logger.info(
+        "Shutdown: notified %d chat(s) that bot is going offline "
+        "(skipped %d without active sessions)",
+        notified,
+        skipped,
+    )
 
 
 def build_application(
     token: str,
     secret: str | None = None,
+    env: str | None = None,
 ) -> AppType:
     app: AppType = (
         Application.builder()
@@ -308,6 +342,9 @@ def build_application(
     )
     app.bot_data[CHAT_IDS_KEY] = set()
     app.bot_data[BOT_SECRET_KEY] = secret.strip() if secret and secret.strip() else None
+    if env:
+        app.bot_data["env"] = env
+        logger.info("Application built for %s environment", env)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(theme_chosen, pattern=f"^{CALLBACK_THEME_PREFIX}"))
     app.add_handler(CallbackQueryHandler(next_card, pattern=f"^{CALLBACK_NEXT}$"))
