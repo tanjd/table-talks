@@ -1,6 +1,6 @@
 DOCKER_IMAGE ?= tanjd/table-talks:latest
 
-.PHONY: help setup sync run test lint format typecheck check docker-build docker-run docker-push
+.PHONY: help setup sync run test lint format typecheck check check-ci docker-build docker-run docker-push
 
 .DEFAULT_GOAL := help
 
@@ -15,6 +15,7 @@ help:
 	@echo "  make format      Format with Ruff (uv run ruff format .)"
 	@echo "  make typecheck   Type-check with Basedpyright (uv run basedpyright src tests)"
 	@echo "  make check       Lint, format, typecheck, and run tests"
+	@echo "  make check-ci    Pre-commit (all files) then check — use in CI"
 	@echo "  make docker-build  Build the Docker image (tag: table-talks)"
 	@echo "  make docker-run    Run the container (requires .env or pass BOT_TOKEN)"
 	@echo "  make docker-push   Build, tag as $(DOCKER_IMAGE), and push to Docker Hub"
@@ -41,6 +42,10 @@ typecheck:
 	uv run basedpyright src tests
 
 check: lint format typecheck test
+
+check-ci:
+	uv run pre-commit run --all-files
+	$(MAKE) check
 
 docker-build:
 	@command -v docker >/dev/null 2>&1 || { echo "Docker not found. Run this from a host terminal (WSL2 or PowerShell) where Docker is installed, or add the Docker feature to the devcontainer (see README)."; exit 127; }
