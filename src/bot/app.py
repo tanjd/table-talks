@@ -8,15 +8,35 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Cont
 
 from .constants import (
     BOT_SECRET_KEY,
+    CALLBACK_BACK_TO_HOME,
+    CALLBACK_BOT_INFO,
     CALLBACK_END_SESSION,
+    CALLBACK_EXIT,
+    CALLBACK_HOME,
     CALLBACK_NEW_TOPIC,
     CALLBACK_NEXT,
     CALLBACK_PREVIOUS,
+    CALLBACK_START_SESSION,
+    CALLBACK_SUPPORT,
     CALLBACK_THEME_PREFIX,
     CHAT_IDS_KEY,
+    DEFAULT_BOT_VERSION,
     OFFLINE_MESSAGE,
 )
-from .handlers import end_session, new_topic, next_card, previous_card, start, theme_chosen
+from .handlers import (
+    back_to_home,
+    end_session,
+    handle_exit,
+    new_topic,
+    next_card,
+    previous_card,
+    show_bot_info,
+    show_home,
+    show_support,
+    start,
+    start_session,
+    theme_chosen,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +103,10 @@ def build_application(
     token: str,
     secret: str | None = None,
     env: str | None = None,
+    creator_user_id: int | None = None,
+    bot_version: str | None = None,
+    coffee_link: str | None = None,
+    deployment_time: str | None = None,
 ) -> AppType:
     """Build and configure the Telegram bot application."""
     app: AppType = (
@@ -96,11 +120,29 @@ def build_application(
     if env:
         app.bot_data["env"] = env
         logger.info("Application built for %s environment", env)
+
+    # Store home page configuration
+    app.bot_data["creator_user_id"] = creator_user_id
+    app.bot_data["bot_version"] = bot_version or DEFAULT_BOT_VERSION
+    app.bot_data["coffee_link"] = coffee_link
+    app.bot_data["deployment_time"] = deployment_time or "Unknown"
+    # Register command handlers
     app.add_handler(CommandHandler("start", start))
+
+    # Register existing callback handlers
     app.add_handler(CallbackQueryHandler(theme_chosen, pattern=f"^{CALLBACK_THEME_PREFIX}"))
     app.add_handler(CallbackQueryHandler(next_card, pattern=f"^{CALLBACK_NEXT}$"))
     app.add_handler(CallbackQueryHandler(previous_card, pattern=f"^{CALLBACK_PREVIOUS}$"))
     app.add_handler(CallbackQueryHandler(new_topic, pattern=f"^{CALLBACK_NEW_TOPIC}$"))
     app.add_handler(CallbackQueryHandler(end_session, pattern=f"^{CALLBACK_END_SESSION}$"))
+
+    # Register new home page callback handlers
+    app.add_handler(CallbackQueryHandler(show_home, pattern=f"^{CALLBACK_HOME}$"))
+    app.add_handler(CallbackQueryHandler(start_session, pattern=f"^{CALLBACK_START_SESSION}$"))
+    app.add_handler(CallbackQueryHandler(show_bot_info, pattern=f"^{CALLBACK_BOT_INFO}$"))
+    app.add_handler(CallbackQueryHandler(show_support, pattern=f"^{CALLBACK_SUPPORT}$"))
+    app.add_handler(CallbackQueryHandler(handle_exit, pattern=f"^{CALLBACK_EXIT}$"))
+    app.add_handler(CallbackQueryHandler(back_to_home, pattern=f"^{CALLBACK_BACK_TO_HOME}$"))
+
     app.add_error_handler(on_error)
     return app

@@ -24,6 +24,17 @@ def is_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     return session.get("authorized", False)
 
 
+def is_creator(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Check if the current user is the bot creator."""
+    if update.effective_user is None:
+        return False
+    app: AppType = context.application  # type: ignore[assignment]
+    creator_id = app.bot_data.get("creator_user_id")
+    if creator_id is None:
+        return False
+    return update.effective_user.id == creator_id
+
+
 async def reject_unauthorized_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,

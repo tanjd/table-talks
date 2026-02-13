@@ -8,8 +8,16 @@ from telegram.ext import Application, ContextTypes
 
 from ..data_loader import Theme, get_questions, get_themes
 from .auth import require_auth, verify_secret
-from .constants import BOT_SECRET_KEY, CALLBACK_THEME_PREFIX
-from .keyboards import navigation_keyboard, theme_keyboard
+from .constants import (
+    BOT_INFO_MESSAGE,
+    BOT_SECRET_KEY,
+    CALLBACK_THEME_PREFIX,
+    DEFAULT_BOT_VERSION,
+    EXIT_MESSAGE,
+    HOME_WELCOME_MESSAGE,
+    SUPPORT_CREATOR_MESSAGE,
+)
+from .keyboards import back_to_home_keyboard, home_keyboard, navigation_keyboard, theme_keyboard
 from .session import format_card, get_session, log_action, track_chat
 
 AppType = Application[Any, Any, Any, Any, Any, Any]
@@ -39,8 +47,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     session["shuffled_questions"] = []
     log_action(update, "start")
     await update.message.reply_text(
-        "Choose a theme to get conversation cards. Each card is one question.",
-        reply_markup=theme_keyboard(),
+        HOME_WELCOME_MESSAGE,
+        reply_markup=home_keyboard(),
     )
 
 
@@ -182,3 +190,132 @@ async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await query.edit_message_text(
         "Thanks for playing! Send /start to begin a new session.",
     )
+
+
+@require_auth
+async def show_home(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Display the home page with main menu options."""
+    app: AppType = context.application  # type: ignore[assignment]
+    track_chat(app, update)
+
+    # Clear theme session state when returning home
+    session = get_session(context)
+    session.pop("theme_id", None)
+    session.pop("index", None)
+    session.pop("shuffled_questions", None)
+
+    log_action(update, "show_home")
+
+    # Handle both command and callback contexts
+    if update.callback_query is not None:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(
+            text=HOME_WELCOME_MESSAGE,
+            reply_markup=home_keyboard(),
+        )
+    elif update.message is not None:
+        await update.message.reply_text(
+            HOME_WELCOME_MESSAGE,
+            reply_markup=home_keyboard(),
+        )
+
+
+@require_auth
+async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle 'Start Session' button - show theme selection."""
+    query = update.callback_query
+    if query is None:
+        return
+    app: AppType = context.application  # type: ignore[assignment]
+    track_chat(app, update)
+    await query.answer()
+
+    log_action(update, "start_session")
+
+    # Clear session state
+    session = get_session(context)
+    session.pop("theme_id", None)
+    session.pop("index", None)
+    session.pop("shuffled_questions", None)
+
+    await query.edit_message_text(
+        text="Choose a theme to get conversation cards. Each card is one question.",
+        reply_markup=theme_keyboard(),
+    )
+
+
+@require_auth
+async def show_bot_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Display bot information."""
+    query = update.callback_query
+    if query is None:
+        return
+    app: AppType = context.application  # type: ignore[assignment]
+    track_chat(app, update)
+    await query.answer()
+
+    log_action(update, "show_bot_info")
+
+    # Get config from bot_data
+    version = app.bot_data.get("bot_version", DEFAULT_BOT_VERSION)
+    last_updated = app.bot_data.get("deployment_time", "Unknown")
+
+    message = BOT_INFO_MESSAGE.format(
+        version=version,
+        last_updated=last_updated,
+    )
+
+    await query.edit_message_text(
+        text=message,
+        reply_markup=back_to_home_keyboard(),
+    )
+
+
+@require_auth
+async def show_support(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show support information with coffee link."""
+    query = update.callback_query
+    if query is None:
+        return
+    app: AppType = context.application  # type: ignore[assignment]
+    track_chat(app, update)
+    await query.answer()
+
+    log_action(update, "show_support")
+
+    # Show coffee link to all users
+    coffee_link = app.bot_data.get("coffee_link", "Not configured")
+    message = SUPPORT_CREATOR_MESSAGE.format(coffee_link=coffee_link)
+
+    await query.edit_message_text(
+        text=message,
+        reply_markup=back_to_home_keyboard(),
+    )
+
+
+@require_auth
+async def handle_exit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle exit button - clear session and show goodbye."""
+    query = update.callback_query
+    if query is None:
+        return
+    app: AppType = context.application  # type: ignore[assignment]
+    track_chat(app, update)
+    await query.answer()
+
+    log_action(update, "handle_exit")
+
+    # Clear all session state
+    session = get_session(context)
+    session.pop("theme_id", None)
+    session.pop("index", None)
+    session.pop("shuffled_questions", None)
+    session.pop("authorized", None)
+
+    await query.edit_message_text(text=EXIT_MESSAGE)
+
+
+@require_auth
+async def back_to_home(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Return to home page from any location."""
+    await show_home(update, context)

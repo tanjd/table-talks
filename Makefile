@@ -1,5 +1,8 @@
 DOCKER_IMAGE ?= tanjd/table-talks:latest
 
+# Suppress "Entering/Leaving directory" messages
+MAKEFLAGS += --no-print-directory
+
 .PHONY: help setup sync run test lint format typecheck check check-ci docker-build docker-run docker-push
 
 .DEFAULT_GOAL := help

@@ -7,6 +7,14 @@ CALLBACK_PREVIOUS = "previous"
 CALLBACK_NEW_TOPIC = "new_topic"
 CALLBACK_END_SESSION = "end_session"
 
+# Home page actions
+CALLBACK_HOME = "home"
+CALLBACK_START_SESSION = "start_session"
+CALLBACK_BOT_INFO = "bot_info"
+CALLBACK_SUPPORT = "support"
+CALLBACK_EXIT = "exit"
+CALLBACK_BACK_TO_HOME = "back_to_home"
+
 # Bot data keys
 CHAT_IDS_KEY = "chat_ids"
 BOT_SECRET_KEY = "bot_secret"
@@ -16,3 +24,43 @@ OFFLINE_MESSAGE = "The bot is going offline. Try again later."
 UNAUTHORIZED_MESSAGE = (
     "Send /start followed by the secret to use this bot. Ask the owner for the secret."
 )
+
+HOME_WELCOME_MESSAGE = """Welcome to Table Talks! 🎲
+
+This bot helps you spark meaningful conversations with curated question cards organized by themes.
+
+How it works:
+1. Choose a theme
+2. Get random questions one at a time
+3. Discuss and enjoy quality time together
+
+Ready to start?"""
+
+BOT_INFO_MESSAGE = """ℹ️ Bot Information
+
+Table Talks helps create engaging conversations through curated question cards.
+
+📊 Version: {version}
+🕐 Last Updated: {last_updated}
+
+📝 Changelog: Coming soon
+This feature is under development. Check back soon for version history!"""
+
+SUPPORT_CREATOR_MESSAGE = """☕ Support the Creator
+
+Thank you for considering supporting Table Talks!
+
+Your contribution helps maintain and improve the bot.
+
+Buy me a coffee: {coffee_link}"""
+
+SUPPORT_UNAVAILABLE_MESSAGE = """☕ Support Feature
+
+This feature is only available to the bot creator for testing.
+
+Stay tuned for public availability!"""
+
+EXIT_MESSAGE = "Thanks for using Table Talks! Send /start anytime to return."
+
+# Configuration defaults (can be overridden by env vars)
+DEFAULT_BOT_VERSION = "v0.1.0"

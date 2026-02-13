@@ -5,6 +5,7 @@ import os
 import secrets
 import string
 import sys
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -61,7 +62,26 @@ def main() -> None:
     logger.info("Invite link: %s", invite_link)
     sys.stdout.flush()
     sys.stderr.flush()
-    app = build_application(token, secret=secret, env=env_name)
+
+    # Load optional configuration for home page
+    creator_id_str = os.environ.get("CREATOR_USER_ID")
+    creator_user_id = int(creator_id_str) if creator_id_str and creator_id_str.isdigit() else None
+
+    bot_version = os.environ.get("BOT_VERSION")
+    coffee_link = os.environ.get("COFFEE_LINK")
+
+    # Capture deployment time
+    deployment_time = datetime.now().strftime("%Y-%m-%d %H:%M UTC")
+
+    app = build_application(
+        token,
+        secret=secret,
+        env=env_name,
+        creator_user_id=creator_user_id,
+        bot_version=bot_version,
+        coffee_link=coffee_link,
+        deployment_time=deployment_time,
+    )
     health_port = int(os.environ.get("HEALTH_PORT", DEFAULT_HEALTH_PORT))
     start_health_server(port=health_port)
     try:
