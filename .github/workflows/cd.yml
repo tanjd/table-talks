@@ -3,7 +3,7 @@ name: CD
 
 on:
   release:
-    types: [published, released]
+    types: [published]
 
 # Only allow one deployment at a time
 concurrency:
