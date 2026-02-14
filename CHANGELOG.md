@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v1.2.0 (2026-02-14)
+
+### Chores
+
+- Add conventional commit validation to pre-commit hook
+  ([`06929f1`](https://github.com/tanjd/table-talks/commit/06929f1a800a58f87dbbe27e767e558213d3c458))
+
+### Features
+
+- Add SSH signing for verified release commits
+  ([`09b6ca6`](https://github.com/tanjd/table-talks/commit/09b6ca6b57260df31204bd93dd43aa4e5d21bc73))
+
+- Configure SSH signing keys in release workflow - Update commit author to use GitHub private email
+  - Enable verified commits badge on GitHub
+
+- Improve changelog formatting for Telegram display
+  ([`d8450ff`](https://github.com/tanjd/table-talks/commit/d8450ff3a2a22fad7280533539bc9738e64cf3a4))
+
+- Convert markdown headers to bold text for better readability - Replace list dashes with bullet
+  points (•) - Add Markdown parse_mode to bot info and support messages - Make version headers bold
+  for emphasis
+
+
 ## v1.1.5 (2026-02-14)
 
 ### Bug Fixes
