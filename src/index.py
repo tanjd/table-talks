@@ -2,8 +2,6 @@
 
 import logging
 import os
-import secrets
-import string
 import sys
 from datetime import datetime
 
@@ -27,13 +25,6 @@ from .version import get_changelog, get_version  # noqa: E402
 logger = logging.getLogger(__name__)
 
 BOT_USERNAME = "TableTalksBot"
-SECRET_LENGTH = 5
-ALPHANUMERIC = string.ascii_uppercase + string.digits
-
-
-def _generate_secret() -> str:
-    """Return a 5-character alphanumeric code (uppercase + digits)."""
-    return "".join(secrets.choice(ALPHANUMERIC) for _ in range(SECRET_LENGTH))
 
 
 def main() -> None:
@@ -57,10 +48,7 @@ def main() -> None:
         )
         raise SystemExit(1)
 
-    secret = _generate_secret()
-    logger.info("Bot starting (polling) in %s environment with generated secret", env_name)
-    invite_link = f"https://t.me/{BOT_USERNAME}?start={secret}"
-    logger.info("Invite link: %s", invite_link)
+    logger.info("Bot starting (polling) in %s environment", env_name)
     sys.stdout.flush()
     sys.stderr.flush()
 
@@ -78,7 +66,7 @@ def main() -> None:
 
     app = build_application(
         token,
-        secret=secret,
+        secret=None,
         env=env_name,
         creator_user_id=creator_user_id,
         bot_version=bot_version,

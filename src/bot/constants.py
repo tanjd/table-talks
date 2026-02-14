@@ -14,16 +14,13 @@ CALLBACK_BOT_INFO = "bot_info"
 CALLBACK_SUPPORT = "support"
 CALLBACK_EXIT = "exit"
 CALLBACK_BACK_TO_HOME = "back_to_home"
+CALLBACK_RANDOM_MIX = "random_mix"
 
 # Bot data keys
 CHAT_IDS_KEY = "chat_ids"
-BOT_SECRET_KEY = "bot_secret"
 
 # Messages
 OFFLINE_MESSAGE = "The bot is going offline. Try again later."
-UNAUTHORIZED_MESSAGE = (
-    "Send /start followed by the secret to use this bot. Ask the owner for the secret."
-)
 
 HOME_WELCOME_MESSAGE = """Welcome to Table Talks! 🎲
 

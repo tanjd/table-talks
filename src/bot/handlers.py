@@ -7,10 +7,8 @@ from telegram import Update
 from telegram.ext import Application, ContextTypes
 
 from ..data_loader import Theme, get_questions, get_themes
-from .auth import require_auth, verify_secret
 from .constants import (
     BOT_INFO_MESSAGE,
-    BOT_SECRET_KEY,
     CALLBACK_THEME_PREFIX,
     DEFAULT_BOT_VERSION,
     EXIT_MESSAGE,
@@ -18,11 +16,13 @@ from .constants import (
     SUPPORT_CREATOR_MESSAGE,
 )
 from .keyboards import back_to_home_keyboard, home_keyboard, navigation_keyboard, theme_keyboard
+from .rate_limit import rate_limit
 from .session import format_card, get_session, log_action, track_chat
 
 AppType = Application[Any, Any, Any, Any, Any, Any]
 
 
+@rate_limit("command")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start command."""
     if update.message is None:
@@ -30,18 +30,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     app: AppType = context.application  # type: ignore[assignment]
     track_chat(app, update)
     session = get_session(context)
-    raw_secret = app.bot_data.get(BOT_SECRET_KEY)
-    secret: str | None = raw_secret if isinstance(raw_secret, str) and raw_secret else None
-    if secret:
-        # Use context.args (parsed /start arguments) so deep links and "/start SECRET" both work
-        payload = (context.args[0] if context.args else "").strip()
-        if not verify_secret(payload, secret):
-            log_action(update, "start_unauthorized")
-            from .constants import UNAUTHORIZED_MESSAGE
-
-            await update.message.reply_text(UNAUTHORIZED_MESSAGE)
-            return
-        session["authorized"] = True
     session["theme_id"] = None
     session["index"] = 0
     session["shuffled_questions"] = []
@@ -57,6 +45,7 @@ async def send_card(
     context: ContextTypes.DEFAULT_TYPE,
     shuffled_questions: list[str],
     index: int,
+    theme_labels: list[str] | None = None,
 ) -> None:
     """Send a question card to the user."""
     if not shuffled_questions:
@@ -65,20 +54,22 @@ async def send_card(
     else:
         total = len(shuffled_questions)
         idx = index % total
-        text = format_card(shuffled_questions, idx)
+        text = format_card(shuffled_questions, idx, theme_labels)
         # Show back button only if not on first question
         show_back = idx > 0
         markup = navigation_keyboard(show_back=show_back)
         session = get_session(context)
         session["index"] = idx + 1
         session["shuffled_questions"] = shuffled_questions
+        if theme_labels:
+            session["theme_labels"] = theme_labels
     if update.callback_query is not None:
         await update.callback_query.edit_message_text(text=text, reply_markup=markup)
     elif update.message is not None:
         await update.message.reply_text(text, reply_markup=markup)
 
 
-@require_auth
+@rate_limit("theme_selection")
 async def theme_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle theme selection."""
     query = update.callback_query
@@ -102,10 +93,51 @@ async def theme_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     session["theme_id"] = theme_id
     session["index"] = 0
     session["shuffled_questions"] = shuffled
+    session["theme_labels"] = None  # Clear labels for single-theme mode
     await send_card(update, context, shuffled, 0)
 
 
-@require_auth
+@rate_limit("theme_selection")
+async def random_mix_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle random mix selection - questions from all themes shuffled together."""
+    query = update.callback_query
+    if query is None:
+        return
+    app: AppType = context.application  # type: ignore[assignment]
+    track_chat(app, update)
+    await query.answer()
+
+    log_action(update, "random_mix_chosen")
+
+    # Get all questions with their theme IDs
+    from ..data_loader import get_all_questions, get_themes
+
+    all_questions = get_all_questions()
+
+    # Shuffle questions
+    shuffled_pairs = all_questions.copy()
+    random.shuffle(shuffled_pairs)
+
+    # Separate into parallel lists
+    questions = [q for _, q in shuffled_pairs]
+    theme_ids = [tid for tid, _ in shuffled_pairs]
+
+    # Get theme labels for display
+    themes = get_themes()
+    theme_map = {t["id"]: t["label"] for t in themes}
+    theme_labels = [theme_map.get(tid, "Unknown") for tid in theme_ids]
+
+    # Store in session
+    session = get_session(context)
+    session["theme_id"] = "random_mix"
+    session["index"] = 0
+    session["shuffled_questions"] = questions
+    session["theme_labels"] = theme_labels
+
+    await send_card(update, context, questions, 0, theme_labels)
+
+
+@rate_limit("card_navigation")
 async def next_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle next card navigation."""
     query = update.callback_query
@@ -125,10 +157,11 @@ async def next_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     log_action(update, "next_card", theme_id=str(session.get("theme_id", "")))
     next_index = session.get("index", 0)
-    await send_card(update, context, shuffled, next_index)
+    theme_labels = session.get("theme_labels")
+    await send_card(update, context, shuffled, next_index, theme_labels)
 
 
-@require_auth
+@rate_limit("card_navigation")
 async def previous_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle previous card navigation."""
     query = update.callback_query
@@ -150,10 +183,11 @@ async def previous_card(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # Go back: current index points to next card, so go back 2 positions
     prev_index = max(0, current_index - 2)
     log_action(update, "previous_card", theme_id=str(session.get("theme_id", "")))
-    await send_card(update, context, shuffled, prev_index)
+    theme_labels = session.get("theme_labels")
+    await send_card(update, context, shuffled, prev_index, theme_labels)
 
 
-@require_auth
+@rate_limit("callback")
 async def new_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle new topic selection."""
     query = update.callback_query
@@ -173,7 +207,7 @@ async def new_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-@require_auth
+@rate_limit("callback")
 async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle session end."""
     query = update.callback_query
@@ -192,7 +226,7 @@ async def end_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     )
 
 
-@require_auth
+@rate_limit("callback")
 async def show_home(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display the home page with main menu options."""
     app: AppType = context.application  # type: ignore[assignment]
@@ -220,7 +254,7 @@ async def show_home(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
-@require_auth
+@rate_limit("callback")
 async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle 'Start Session' button - show theme selection."""
     query = update.callback_query
@@ -244,7 +278,7 @@ async def start_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     )
 
 
-@require_auth
+@rate_limit("callback")
 async def show_bot_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display bot information."""
     query = update.callback_query
@@ -274,7 +308,7 @@ async def show_bot_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     )
 
 
-@require_auth
+@rate_limit("callback")
 async def show_support(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show support information with coffee link."""
     query = update.callback_query
@@ -297,7 +331,7 @@ async def show_support(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 
-@require_auth
+@rate_limit("callback")
 async def handle_exit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle exit button - clear session and show goodbye."""
     query = update.callback_query
@@ -314,12 +348,11 @@ async def handle_exit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     session.pop("theme_id", None)
     session.pop("index", None)
     session.pop("shuffled_questions", None)
-    session.pop("authorized", None)
 
     await query.edit_message_text(text=EXIT_MESSAGE)
 
 
-@require_auth
+@rate_limit("callback")
 async def back_to_home(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Return to home page from any location."""
     await show_home(update, context)

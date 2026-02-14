@@ -7,7 +7,6 @@ from typing import Any
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 
 from .constants import (
-    BOT_SECRET_KEY,
     CALLBACK_BACK_TO_HOME,
     CALLBACK_BOT_INFO,
     CALLBACK_END_SESSION,
@@ -16,6 +15,7 @@ from .constants import (
     CALLBACK_NEW_TOPIC,
     CALLBACK_NEXT,
     CALLBACK_PREVIOUS,
+    CALLBACK_RANDOM_MIX,
     CALLBACK_START_SESSION,
     CALLBACK_SUPPORT,
     CALLBACK_THEME_PREFIX,
@@ -30,6 +30,7 @@ from .handlers import (
     new_topic,
     next_card,
     previous_card,
+    random_mix_chosen,
     show_bot_info,
     show_home,
     show_support,
@@ -117,7 +118,6 @@ def build_application(
         .build()
     )
     app.bot_data[CHAT_IDS_KEY] = set()
-    app.bot_data[BOT_SECRET_KEY] = secret.strip() if secret and secret.strip() else None
     if env:
         app.bot_data["env"] = env
         logger.info("Application built for %s environment", env)
@@ -133,6 +133,7 @@ def build_application(
 
     # Register existing callback handlers
     app.add_handler(CallbackQueryHandler(theme_chosen, pattern=f"^{CALLBACK_THEME_PREFIX}"))
+    app.add_handler(CallbackQueryHandler(random_mix_chosen, pattern=f"^{CALLBACK_RANDOM_MIX}$"))
     app.add_handler(CallbackQueryHandler(next_card, pattern=f"^{CALLBACK_NEXT}$"))
     app.add_handler(CallbackQueryHandler(previous_card, pattern=f"^{CALLBACK_PREVIOUS}$"))
     app.add_handler(CallbackQueryHandler(new_topic, pattern=f"^{CALLBACK_NEW_TOPIC}$"))

@@ -51,3 +51,22 @@ def get_questions(theme_id: str) -> list[str]:
                 out.append(q)
     _QUESTIONS_CACHE[theme_id] = out
     return out
+
+
+def get_all_questions() -> list[tuple[str, str]]:
+    """Return list of (theme_id, question) tuples for all questions.
+
+    Used for random mix mode to show which theme each question is from.
+    """
+    all_questions: list[tuple[str, str]] = []
+    themes = get_themes()
+    theme_ids = {t["id"] for t in themes}
+
+    with open(QUESTIONS_CSV, encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            theme_id = row.get("theme_id", "").strip()
+            question = row.get("question", "").strip()
+            if theme_id in theme_ids and question:
+                all_questions.append((theme_id, question))
+
+    return all_questions

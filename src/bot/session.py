@@ -17,7 +17,7 @@ class SessionDict(TypedDict, total=False):
     theme_id: str | None
     index: int
     shuffled_questions: list[str]
-    authorized: bool
+    theme_labels: list[str] | None
 
 
 def get_session(context: ContextTypes.DEFAULT_TYPE) -> SessionDict:
@@ -55,9 +55,26 @@ def log_action(update: Update, action: str, **extra: str | int) -> None:
     logger.info(" | ".join(parts))
 
 
-def format_card(questions: list[str], index: int) -> str:
-    """Format one question with 'Question N of M'."""
+def is_creator(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Check if the current user is the bot creator."""
+    if update.effective_user is None:
+        return False
+    app: AppType = context.application  # type: ignore[assignment]
+    creator_id = app.bot_data.get("creator_user_id")
+    if creator_id is None:
+        return False
+    return update.effective_user.id == creator_id
+
+
+def format_card(questions: list[str], index: int, theme_labels: list[str] | None = None) -> str:
+    """Format one question with 'Question N of M' and optional theme label."""
     total = len(questions)
     idx = index % total
     one_based = idx + 1
-    return f"Question {one_based} of {total}\n\n{questions[idx]}"
+
+    # Add theme label if in random mix mode
+    theme_info = ""
+    if theme_labels and idx < len(theme_labels):
+        theme_info = f"\n📚 Theme: {theme_labels[idx]}\n"
+
+    return f"Question {one_based} of {total}{theme_info}\n{questions[idx]}"

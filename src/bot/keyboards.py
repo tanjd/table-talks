@@ -12,6 +12,7 @@ from .constants import (
     CALLBACK_NEW_TOPIC,
     CALLBACK_NEXT,
     CALLBACK_PREVIOUS,
+    CALLBACK_RANDOM_MIX,
     CALLBACK_START_SESSION,
     CALLBACK_SUPPORT,
     CALLBACK_THEME_PREFIX,
@@ -25,6 +26,8 @@ def theme_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(t["label"], callback_data=f"{CALLBACK_THEME_PREFIX}{t['id']}")]
         for t in themes
     ]
+    # Add random mix button
+    buttons.append([InlineKeyboardButton("🎲 Random Mix", callback_data=CALLBACK_RANDOM_MIX)])
     # Add back to home button at the bottom
     buttons.append([InlineKeyboardButton("🏠 Back to Home", callback_data=CALLBACK_BACK_TO_HOME)])
     return InlineKeyboardMarkup(buttons)
