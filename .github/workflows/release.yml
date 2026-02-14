@@ -28,7 +28,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: main
           fetch-depth: 0 # Full history for semantic-release
           token: ${{ secrets.GITHUB_TOKEN }}
 
