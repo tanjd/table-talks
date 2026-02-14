@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.3.2 (2026-02-14)
+
+### Bug Fixes
+
+- **ci**: Add version list marker to CHANGELOG.md for v10 compatibility
+  ([`6c4ebd7`](https://github.com/tanjd/table-talks/commit/6c4ebd74085ee7d554f339b327739e652a2a39bd))
+
+### Continuous Integration
+
+- Migrate to official python-semantic-release GitHub Actions
+  ([`075127d`](https://github.com/tanjd/table-talks/commit/075127d19b909d4309cf190a404ccde2917ec390))
+
+
 ## v1.2.0 (2026-02-14)
 
 ### Chores
