@@ -90,17 +90,24 @@ def get_changelog(num_versions: int = 2) -> str:
 
             # Clean up the section:
             # - Remove the version header (##)
+            # - Format for Telegram display
             # - Limit to reasonable length (e.g., 500 chars per version)
-            # - Remove leading/trailing whitespace
             lines = section.split("\n")[1:]  # Skip the version header line
             section_content = "\n".join(lines).strip()
+
+            # Format for Telegram:
+            # Convert markdown headers (### Features) to bold (**Features**)
+            section_content = re.sub(r"^###\s+(.+)$", r"*\1*", section_content, flags=re.MULTILINE)
+
+            # Clean up list formatting (keep bullets but ensure spacing)
+            section_content = re.sub(r"^-\s+", r"• ", section_content, flags=re.MULTILINE)
 
             # Truncate if too long
             max_chars = 500
             if len(section_content) > max_chars:
                 section_content = section_content[:max_chars].rsplit("\n", 1)[0] + "\n..."
 
-            changelog_sections.append(f"v{version}\n{section_content}")
+            changelog_sections.append(f"*v{version}*\n{section_content}")
 
         result = "\n\n".join(changelog_sections)
         logger.info("Extracted %d version(s) from CHANGELOG.md", len(changelog_sections))

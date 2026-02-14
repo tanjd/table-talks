@@ -270,6 +270,7 @@ async def show_bot_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await query.edit_message_text(
         text=message,
         reply_markup=back_to_home_keyboard(),
+        parse_mode="Markdown",
     )
 
 
@@ -292,6 +293,7 @@ async def show_support(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await query.edit_message_text(
         text=message,
         reply_markup=back_to_home_keyboard(),
+        parse_mode="Markdown",
     )
 
 
