@@ -29,6 +29,7 @@ htmlcov/
 
 # Docs and tooling (not needed in image)
 *.md
+!CHANGELOG.md
 Makefile
 docker-compose*.yml
 Dockerfile*

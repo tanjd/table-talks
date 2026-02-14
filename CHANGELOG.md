@@ -71,4 +71,3 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - modularize bot code into separate files
 - add auth decorator and improve session management
-
