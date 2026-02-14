@@ -5,12 +5,19 @@ on:
   release:
     types: [published]
 
+# Only allow one deployment at a time
+concurrency:
+  group: deploy-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
     name: Build and push Docker image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 15
     steps:
       - name: Check required secrets
         run: |

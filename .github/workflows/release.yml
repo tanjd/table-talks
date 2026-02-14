@@ -6,6 +6,11 @@ on:
     branches: [main]
     types: [completed]
 
+# Only allow one release at a time
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
   contents: write
   issues: write
@@ -15,29 +20,26 @@ jobs:
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Only run if CI succeeded and this isn't a release commit
     if: github.event.workflow_run.conclusion == 'success' && !contains(github.event.workflow_run.head_commit.message, 'chore(release)')
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 0  # Full history for semantic-release
+          fetch-depth: 0 # Full history for semantic-release
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv and set Python 3.13
+        uses: astral-sh/setup-uv@v7
         with:
+          enable-cache: true
           python-version: "3.13"
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
       - name: Install dependencies
-        run: |
-          uv sync
-          uv pip install python-semantic-release
+        run: uv sync --extra release
 
       - name: Configure Git
         run: |
