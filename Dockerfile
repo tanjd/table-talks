@@ -29,6 +29,9 @@ COPY --from=builder --link /app/src /app/src
 COPY --from=builder --link /app/data /app/data
 COPY --from=builder --link /app/.env.example /app/.env.example
 
+# Copy version and changelog files for bot info display
+COPY --link pyproject.toml CHANGELOG.md /app/
+
 RUN adduser --disabled-password --gecos "" appuser \
     && chown -R appuser:appuser /app
 
