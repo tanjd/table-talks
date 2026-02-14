@@ -259,10 +259,12 @@ async def show_bot_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # Get config from bot_data
     version = app.bot_data.get("bot_version", DEFAULT_BOT_VERSION)
     last_updated = app.bot_data.get("deployment_time", "Unknown")
+    changelog = app.bot_data.get("changelog", "Not available yet")
 
     message = BOT_INFO_MESSAGE.format(
         version=version,
         last_updated=last_updated,
+        changelog=changelog,
     )
 
     await query.edit_message_text(

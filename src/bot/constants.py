@@ -43,8 +43,8 @@ Table Talks helps create engaging conversations through curated question cards.
 📊 Version: {version}
 🕐 Last Updated: {last_updated}
 
-📝 Changelog: Coming soon
-This feature is under development. Check back soon for version history!"""
+📝 Recent Changes:
+{changelog}"""
 
 SUPPORT_CREATOR_MESSAGE = """☕ Support the Creator
 

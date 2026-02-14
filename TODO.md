@@ -6,7 +6,6 @@
 
 ## Ideas / improvements
 
-- **Changelog System** — Implement version tracking and display last 2 versions changelog in Bot Info screen.
 - **Favorites / Bookmark Questions** — Let users save interesting questions to a favorites list. Add `/favorites` command to view saved questions later.
 - **Random Mode Across All Themes** — "Surprise me" option that pulls random questions from all themes. Great for variety without committing to a single topic.
 - **For users to suggest questions** — Let users submit new question ideas (e.g. a command or button "Suggest a question") and store them (file, sheet, or queue) for the owner to review and add to the deck.

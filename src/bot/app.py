@@ -105,6 +105,7 @@ def build_application(
     env: str | None = None,
     creator_user_id: int | None = None,
     bot_version: str | None = None,
+    changelog: str | None = None,
     coffee_link: str | None = None,
     deployment_time: str | None = None,
 ) -> AppType:
@@ -124,6 +125,7 @@ def build_application(
     # Store home page configuration
     app.bot_data["creator_user_id"] = creator_user_id
     app.bot_data["bot_version"] = bot_version or DEFAULT_BOT_VERSION
+    app.bot_data["changelog"] = changelog
     app.bot_data["coffee_link"] = coffee_link
     app.bot_data["deployment_time"] = deployment_time or "Unknown"
     # Register command handlers

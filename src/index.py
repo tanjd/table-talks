@@ -22,6 +22,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 from .bot import build_application  # noqa: E402
 from .health import DEFAULT_HEALTH_PORT, start_health_server  # noqa: E402
+from .version import get_changelog, get_version  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,9 @@ def main() -> None:
     creator_id_str = os.environ.get("CREATOR_USER_ID")
     creator_user_id = int(creator_id_str) if creator_id_str and creator_id_str.isdigit() else None
 
-    bot_version = os.environ.get("BOT_VERSION")
+    # Get version and changelog from files (managed by semantic-release)
+    bot_version = get_version()
+    changelog = get_changelog(num_versions=2)
     coffee_link = os.environ.get("COFFEE_LINK")
 
     # Capture deployment time
@@ -79,6 +82,7 @@ def main() -> None:
         env=env_name,
         creator_user_id=creator_user_id,
         bot_version=bot_version,
+        changelog=changelog,
         coffee_link=coffee_link,
         deployment_time=deployment_time,
     )
