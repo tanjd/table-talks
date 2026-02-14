@@ -4,12 +4,6 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and uses [Conventional Commits](https://www.conventionalcommits.org/).
 
-## 1.1.5 (2026-02-14)
-
-### Bug Fixes
-
-- test changelog generation
-
 ## 1.1.4 (2026-02-14)
 
 ### Bug Fixes
