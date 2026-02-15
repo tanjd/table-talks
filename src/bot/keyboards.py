@@ -1,5 +1,7 @@
 """Keyboard builders for the bot."""
 
+import logging
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from ..data_loader import Theme, get_themes
@@ -18,14 +20,52 @@ from .constants import (
     CALLBACK_THEME_PREFIX,
 )
 
+logger = logging.getLogger(__name__)
+
+# Telegram's callback_data limit
+MAX_CALLBACK_DATA_LENGTH = 64
+
+
+def is_valid_callback_data(callback_data: str) -> bool:
+    """Validate callback data meets Telegram's requirements.
+
+    Args:
+        callback_data: The callback data string to validate
+
+    Returns:
+        True if valid, False otherwise
+    """
+    if not callback_data:
+        return False
+    if len(callback_data.encode("utf-8")) > MAX_CALLBACK_DATA_LENGTH:
+        return False
+    # Check for problematic characters
+    if any(c in callback_data for c in ["\n", "\r", "\t"]):
+        return False
+    return True
+
 
 def theme_keyboard() -> InlineKeyboardMarkup:
-    """Build keyboard with theme selection buttons and back to home button."""
+    """Build keyboard with theme selection buttons and back to home button.
+
+    Validates callback_data and skips themes with invalid IDs.
+    """
     themes: list[Theme] = get_themes()
-    buttons = [
-        [InlineKeyboardButton(t["label"], callback_data=f"{CALLBACK_THEME_PREFIX}{t['id']}")]
-        for t in themes
-    ]
+    buttons = []
+
+    for t in themes:
+        callback_data = f"{CALLBACK_THEME_PREFIX}{t['id']}"
+
+        # Validate callback data
+        if not is_valid_callback_data(callback_data):
+            logger.error(
+                f"Skipping theme '{t['label']}' - invalid callback_data: "
+                f"{callback_data!r} ({len(callback_data.encode('utf-8'))} bytes)"
+            )
+            continue
+
+        buttons.append([InlineKeyboardButton(t["label"], callback_data=callback_data)])
+
     # Add random mix button
     buttons.append([InlineKeyboardButton("🎲 Random Mix", callback_data=CALLBACK_RANDOM_MIX)])
     # Add back to home button at the bottom

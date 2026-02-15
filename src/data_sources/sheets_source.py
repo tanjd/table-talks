@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 # Required columns in the Google Sheet
 REQUIRED_COLUMNS = ["theme_id", "theme_label", "theme_description", "question"]
 
+# Maximum length for theme_id to fit in Telegram callback_data
+# Format: "theme:{id}" must be <= 64 bytes
+# So theme_id must be <= 64 - len("theme:") = 58 bytes
+MAX_THEME_ID_LENGTH = 58
+
 
 class GoogleSheetsDataSource(DataSource):
     """Load themes and questions from Google Sheets with caching and CSV fallback.
@@ -156,6 +161,21 @@ class GoogleSheetsDataSource(DataSource):
             # Skip rows with missing required fields
             if not (theme_id and theme_label and question):
                 logger.warning(f"Skipping row {i} with missing required fields")
+                continue
+
+            # Validate theme_id length and characters
+            if len(theme_id.encode("utf-8")) > MAX_THEME_ID_LENGTH:
+                logger.error(
+                    f"Skipping row {i} - theme_id '{theme_id}' too long "
+                    f"({len(theme_id.encode('utf-8'))} bytes, max {MAX_THEME_ID_LENGTH})"
+                )
+                continue
+
+            # Check for invalid characters in theme_id (control characters)
+            if any(c in theme_id for c in ["\n", "\r", "\t"]):
+                logger.error(
+                    f"Skipping row {i} - theme_id '{theme_id}' contains invalid characters"
+                )
                 continue
 
             # Deduplicate themes

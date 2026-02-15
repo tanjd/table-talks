@@ -1,9 +1,16 @@
 """CSV file data source implementation."""
 
 import csv
+import logging
 from pathlib import Path
 
 from .base import DataSource, Theme
+
+logger = logging.getLogger(__name__)
+
+# Maximum length for theme_id to fit in Telegram callback_data
+# Format: "theme:{id}" must be <= 64 bytes
+MAX_THEME_ID_LENGTH = 58
 
 
 class CSVDataSource(DataSource):
@@ -26,18 +33,37 @@ class CSVDataSource(DataSource):
         self._questions_cache: dict[str, list[str]] = {}
 
     def get_themes(self) -> list[Theme]:
-        """Return list of theme dicts: id, label, description."""
+        """Return list of theme dicts: id, label, description.
+
+        Validates theme IDs and skips invalid entries.
+        """
         themes: list[Theme] = []
         with open(self.themes_csv, encoding="utf-8", newline="") as f:
-            for row in csv.DictReader(f):
-                if row.get("id") and row.get("label"):
-                    themes.append(
-                        Theme(
-                            id=str(row["id"]).strip(),
-                            label=str(row["label"]).strip(),
-                            description=str(row.get("description", "")).strip(),
-                        )
+            for i, row in enumerate(csv.DictReader(f), start=2):
+                if not (row.get("id") and row.get("label")):
+                    continue
+
+                theme_id = str(row["id"]).strip()
+                theme_label = str(row["label"]).strip()
+                theme_desc = str(row.get("description", "")).strip()
+
+                # Validate theme_id length
+                if len(theme_id.encode("utf-8")) > MAX_THEME_ID_LENGTH:
+                    logger.error(
+                        f"Skipping theme at row {i} - theme_id '{theme_id}' too long "
+                        f"({len(theme_id.encode('utf-8'))} bytes, max {MAX_THEME_ID_LENGTH})"
                     )
+                    continue
+
+                # Check for invalid characters (control characters)
+                if any(c in theme_id for c in ["\n", "\r", "\t"]):
+                    logger.error(
+                        f"Skipping theme at row {i} - theme_id '{theme_id}' "
+                        "contains invalid characters"
+                    )
+                    continue
+
+                themes.append(Theme(id=theme_id, label=theme_label, description=theme_desc))
         return themes
 
     def get_questions(self, theme_id: str) -> list[str]:
