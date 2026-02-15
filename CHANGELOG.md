@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-02-15)
+
+### Features
+
+- Add Google Sheets integration with pluggable data sources
+  ([`b480a3a`](https://github.com/tanjd/table-talks/commit/b480a3a3f13f3b0d8da97d7caf075f811b53bfa8))
+
+
 ## v1.3.2 (2026-02-14)
 
 ### Bug Fixes
