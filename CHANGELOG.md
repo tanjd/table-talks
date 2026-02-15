@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-02-15)
+
+### Features
+
+- Add validation for theme IDs and callback data
+  ([`3f46b42`](https://github.com/tanjd/table-talks/commit/3f46b420bd81f4d9450daa5440a3e11185a1731a))
+
+
 ## v1.4.0 (2026-02-15)
 
 ### Features
