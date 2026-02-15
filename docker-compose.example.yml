@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Table Talks Telegram Bot
+  bot:
+    build: .
+    image: tabletalks-bot:latest
+    container_name: tabletalks-bot
+    restart: unless-stopped
+
+    # Mount secrets directory (read-only for security)
+    volumes:
+      - ./secrets:/app/secrets:ro
+
+    # Environment variables
+    environment:
+      # Bot configuration
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ENV=prd
+      - HEALTH_PORT=9999
+
+      # Optional: Coffee link
+      - COFFEE_LINK=${COFFEE_LINK}
+
+      # Google Sheets integration (optional)
+      - ENABLE_GOOGLE_SHEETS=true
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+      - GOOGLE_SHEET_NAME=Questions
+      - GOOGLE_SERVICE_ACCOUNT_FILE=/app/secrets/service-account.json
+      - SHEETS_CACHE_TTL=300
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9999/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Usage:
+# 1. Copy this file to docker-compose.yml
+# 2. Create .env file with your secrets:
+#    BOT_TOKEN=your_telegram_bot_token
+#    GOOGLE_SHEET_ID=your_google_sheet_id
+#    COFFEE_LINK=https://buymeacoffee.com/username (optional)
+# 3. Place service-account.json in ./secrets/
+# 4. Run: docker-compose up -d
+# 5. View logs: docker-compose logs -f
+# 6. Stop: docker-compose down
